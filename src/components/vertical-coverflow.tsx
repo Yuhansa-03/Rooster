@@ -30,6 +30,7 @@ export function VerticalCoverflow({
   falloff = 0.56,
   cardClassName,
 }: VerticalCoverflowProps) {
+  const router = useRouter();
   const count = slides.length;
   const frameRef = React.useRef<HTMLDivElement>(null);
   const cardRefs = React.useRef<(HTMLDivElement | null)[]>([]);
@@ -125,7 +126,6 @@ export function VerticalCoverflow({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    event.currentTarget.setPointerCapture(event.pointerId);
     targetRef.current = posRef.current;
     didDragRef.current = false;
     dragRef.current = {
@@ -144,13 +144,17 @@ export function VerticalCoverflow({
     const pitch = pitchFor();
     if (!pitch) return;
 
-    if (Math.abs(event.clientY - drag.y) > 8) {
+    const delta = event.clientY - drag.y;
+    if (Math.abs(delta) <= 10 && !didDragRef.current) return;
+
+    if (!didDragRef.current) {
       didDragRef.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
     }
 
     const now = performance.now();
     const previous = posRef.current;
-    posRef.current = drag.pos - (event.clientY - drag.y) / pitch;
+    posRef.current = drag.pos - delta / pitch;
     drag.v = ((posRef.current - previous) / Math.max(now - drag.t, 1)) * 1000;
     drag.t = now;
 
@@ -163,8 +167,25 @@ export function VerticalCoverflow({
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
     dragRef.current = null;
-    const carried = Math.max(-2, Math.min(2, drag.v * 0.18));
-    settle(Math.round(posRef.current + carried));
+
+    if (didDragRef.current) {
+      const carried = Math.max(-2, Math.min(2, drag.v * 0.18));
+      settle(Math.round(posRef.current + carried));
+      return;
+    }
+
+    const card = cardRefs.current.find((node) => {
+      if (!node) return false;
+      const box = node.getBoundingClientRect();
+      return (
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom
+      );
+    });
+    const href = card?.dataset.navHref;
+    if (href) router.push(href);
   };
 
   useIsoLayoutEffect(() => {
@@ -240,29 +261,16 @@ export function VerticalCoverflow({
               ref={(node) => {
                 cardRefs.current[index] = node;
               }}
-              role="group"
-              aria-roledescription="slide"
+              role="link"
+              data-nav-href={slide.href}
               aria-label={slide.title ?? `${index + 1} of ${count}`}
               className={cn(
-                "absolute left-1/2 top-1/2 aspect-square overflow-hidden rounded-2xl bg-black text-white shadow-none will-change-transform",
+                "absolute left-1/2 top-1/2 aspect-square cursor-pointer overflow-hidden rounded-2xl bg-black text-white shadow-none will-change-transform",
                 cardClassName,
               )}
               style={{ width: "var(--cf-card)" }}
             >
-              {slide.href ? (
-                <Link
-                  href={slide.href}
-                  draggable={false}
-                  onClick={(event) => {
-                    if (didDragRef.current) event.preventDefault();
-                  }}
-                  className="relative block h-full w-full"
-                >
-                  <SlideMedia slide={slide} />
-                </Link>
-              ) : (
-                <SlideMedia slide={slide} />
-              )}
+              <SlideMedia slide={slide} />
             </div>
           ))}
         </div>
@@ -273,7 +281,7 @@ export function VerticalCoverflow({
 
 function SlideMedia({ slide }: { slide: CoverflowSlide }) {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-black px-3">
+    <div className="pointer-events-none flex h-full w-full items-center justify-center bg-transparent px-3">
       {slide.title ? (
         <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-white sm:text-xs">
           {slide.title}

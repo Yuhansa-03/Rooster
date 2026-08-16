@@ -48,7 +48,7 @@ export function NavCoverflow() {
       rotate={14}
       depth={0.22}
       perspective={4}
-      cardClassName="border-2 border-sky-400 bg-blue-600 text-white shadow-none"
+      cardClassName="border-2 border-sky-400 bg-black text-white shadow-none transition-colors duration-200 hover:border-sky-300 hover:bg-sky-950"
     />
   );
 }
