@@ -9,7 +9,7 @@ const CLIPS = ["/vid/hero-1.mp4", "/vid/hero-2.mp4"];
 
 export function HeroVideo() {
   const [active, setActive] = useState(0);
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export function HeroVideo() {
 
     const tryPlay = () => {
       void current.play().catch(() => {
+        // Autoplay with sound is blocked — keep muted until user unmutes
         current.muted = true;
         void current.play().catch(() => {});
       });
@@ -37,24 +38,20 @@ export function HeroVideo() {
     }
   }, [active, soundOn]);
 
-  useEffect(() => {
-    if (!soundOn) return;
-
-    const unlock = () => {
+  const toggleSound = () => {
+    setSoundOn((value) => {
+      const next = !value;
       const current = videoRefs.current[active];
-      if (!current) return;
-      current.muted = false;
-      current.volume = 1;
-      void current.play().catch(() => {});
-    };
-
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("keydown", unlock);
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [active, soundOn]);
+      if (current) {
+        current.muted = !next;
+        current.volume = 1;
+        if (next) {
+          void current.play().catch(() => {});
+        }
+      }
+      return next;
+    });
+  };
 
   return (
     <>
@@ -65,10 +62,11 @@ export function HeroVideo() {
             videoRefs.current[index] = node;
           }}
           className={cn(
-            "absolute inset-0 h-full w-full object-cover transition-opacity duration-700",
-            index === active ? "opacity-100" : "opacity-0",
+            "absolute inset-0 h-full w-full object-cover brightness-125 contrast-105 transition-opacity duration-700",
+            index === active ? "opacity-100" : "opacity-0"
           )}
           playsInline
+          muted
           preload="auto"
           autoPlay={index === 0}
           onEnded={() => {
@@ -84,10 +82,14 @@ export function HeroVideo() {
       <button
         type="button"
         aria-label={soundOn ? "Mute hero video" : "Unmute hero video"}
-        onClick={() => setSoundOn((value) => !value)}
+        onClick={toggleSound}
         className="absolute bottom-6 left-6 z-40 rounded-full border-2 border-sky-400 bg-black/70 p-2 text-white transition hover:bg-sky-950"
       >
-        {soundOn ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
+        {soundOn ? (
+          <Volume2 className="size-5" />
+        ) : (
+          <VolumeX className="size-5" />
+        )}
       </button>
     </>
   );

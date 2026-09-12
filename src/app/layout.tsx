@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Orbitron } from "next/font/google";
 import "./globals.css";
 
@@ -22,13 +22,19 @@ export const metadata: Metadata = {
   description: "Rooster — techno studio landing.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`dark ${geistSans.variable} ${geistMono.variable} ${orbitron.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-black text-foreground">{children}</body>
+      <body className="page-shell min-h-full text-foreground">{children}</body>
     </html>
   );
 }
